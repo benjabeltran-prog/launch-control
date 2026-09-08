@@ -1,0 +1,1797 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Launch Control — Propultech</title>
+<link rel="icon" type="image/png" href="https://assets.propul.tech/Logomark_Principal_1024.png">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --bg:#0B0C0E;
+  --panel:#151619;
+  --panel-2:#1B1D21;
+  --border:rgba(244,245,247,0.12);
+  --border-strong:rgba(244,245,247,0.22);
+  --accent:#50BAFF;
+  --accent-strong:#0624FF;
+  --violet:#9B5FD4;
+  --violet-deep:#5B2D91;
+  --fg:#F4F5F7;
+  --muted:#9AA0AC;
+  --dim:#5B5F68;
+  --danger:#FF6B5E;
+  --green:#3ED598;
+  --yellow:#F2C94C;
+  --radius:0px;
+}
+*{box-sizing:border-box;}
+html{color-scheme:dark;} /* tells the browser to render native pickers/dropdowns in dark mode, not invisible-on-dark light mode */
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--fg);
+  font-family:'Space Grotesk',sans-serif;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:'JetBrains Mono',monospace;}
+::selection{background:var(--accent);color:#0B0C0E;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+
+/* faint grain */
+.grain{
+  position:fixed;inset:0;pointer-events:none;opacity:0.035;z-index:999;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+#root{display:flex;min-height:100vh;align-items:flex-start;}
+
+/* ---------- SIDEBAR ---------- */
+.sidebar{
+  width:280px;flex:0 0 280px;
+  position:sticky;top:0;height:100vh;
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  background:linear-gradient(180deg, rgba(80,186,255,0.04), transparent 200px);
+}
+.brand{
+  padding:22px 20px 18px;
+  border-bottom:1px solid var(--border);
+}
+.brand-kicker{
+  font-size:11px;letter-spacing:0.14em;color:var(--accent);
+  text-transform:uppercase;font-weight:500;
+}
+.brand-title{
+  font-size:20px;font-weight:700;letter-spacing:-0.01em;margin-top:4px;
+}
+.brand-sub{font-size:11px;color:var(--dim);margin-top:6px;letter-spacing:0.03em;}
+.sync-badge{font-size:10px;margin-top:8px;letter-spacing:0.03em;}
+.sync-badge.live{color:var(--accent);}
+.sync-badge.local{color:var(--dim);}
+.build-tag{font-size:9px;color:var(--dim);opacity:0.5;margin-top:10px;}
+
+.missions{flex:1;min-height:0;overflow-y:auto;padding:14px 0;}
+.missions-label{
+  font-size:10px;letter-spacing:0.14em;color:var(--dim);text-transform:uppercase;
+  padding:4px 20px 10px;
+}
+.org-section{margin-bottom:6px;}
+.org-header{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:10px 20px 6px 20px;
+}
+.org-name{
+  flex:1;min-width:0;
+  font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;font-weight:500;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  background:none;border:none;border-bottom:1px solid transparent;
+  padding:1px 0;
+}
+.org-name:hover{border-bottom-color:var(--border-strong);}
+.org-name:focus{outline:none;border-bottom-color:var(--accent);color:var(--fg);}
+.org-actions{display:flex;gap:2px;flex:0 0 auto;opacity:0;}
+.org-section:hover .org-actions{opacity:1;}
+.org-actions .icon-btn{font-size:12px;padding:2px 4px;}
+.org-empty{padding:4px 20px 10px;color:var(--dim);font-size:11px;}
+.org-section.drag-over{background:rgba(80,186,255,0.08);outline:1px dashed var(--accent);outline-offset:-2px;}
+.mission{
+  display:flex;align-items:center;gap:8px;
+  padding:11px 20px 11px 10px;
+  border-left:2px solid transparent;
+  border-top:2px solid transparent;
+  cursor:pointer;
+  position:relative;
+}
+.mission:hover{background:rgba(244,245,247,0.03);}
+.mission.active{
+  border-left-color:var(--accent);
+  background:rgba(80,186,255,0.06);
+}
+.mission.dragging{opacity:0.35;}
+.mission.drag-over{border-top-color:var(--accent);}
+.mission-handle{
+  flex:0 0 auto;color:var(--dim);font-size:14px;cursor:grab;
+  opacity:0;line-height:1;padding:2px 0;
+}
+.mission:hover .mission-handle{opacity:1;}
+.mission-handle:active{cursor:grabbing;}
+.mission-dot{
+  width:6px;height:6px;flex:0 0 6px;border-radius:50%;
+  background:var(--dim);
+}
+.mission-dot.dot-green{background:var(--green);box-shadow:0 0 0 3px rgba(62,213,152,0.18);}
+.mission-dot.dot-blue{background:var(--accent);box-shadow:0 0 0 3px rgba(80,186,255,0.18);}
+.mission-dot.dot-yellow{background:var(--yellow);box-shadow:0 0 0 3px rgba(242,201,76,0.18);}
+.mission-body{flex:1;min-width:0;}
+.mission-name{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mission-meta{font-size:10px;color:var(--dim);margin-top:2px;}
+.mission-pct{font-size:11px;color:var(--muted);}
+.mission-del{
+  opacity:0;background:none;border:none;color:var(--dim);padding:2px 4px;font-size:14px;
+}
+.mission:hover .mission-del{opacity:1;}
+.mission-del:hover{color:var(--danger);}
+
+.add-mission{
+  margin:8px 16px 16px;
+  border:1px dashed var(--border-strong);
+  color:var(--muted);
+  background:none;
+  padding:10px;
+  font-size:12px;
+  letter-spacing:0.04em;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.add-mission:hover{border-color:var(--accent);color:var(--accent);}
+.change-pass-link{
+  margin:0 16px 16px;background:none;border:none;color:var(--dim);
+  font-size:10px;text-align:center;padding:4px;text-decoration:underline;
+  text-underline-offset:2px;
+}
+.change-pass-link:hover{color:var(--muted);}
+
+/* ---------- MAIN ---------- */
+.main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.empty-state{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:var(--dim);gap:10px;text-align:center;padding:40px;
+}
+
+.topbar{
+  flex:0 0 auto;
+  border-bottom:1px solid var(--border);
+  padding:24px 32px;
+  display:flex;justify-content:space-between;align-items:flex-start;gap:24px;
+  flex-wrap:wrap;
+}
+.client-title-row{display:flex;align-items:center;gap:12px;}
+.client-title{
+  font-size:26px;font-weight:700;letter-spacing:-0.01em;
+  background:transparent;border:none;color:var(--fg);
+  border-bottom:1px solid transparent;
+  padding:2px 0;min-width:80px;
+}
+.client-title:focus{outline:none;border-bottom:1px solid var(--accent);}
+.status-pill{
+  font-size:10px;letter-spacing:0.08em;text-transform:uppercase;
+  padding:4px 9px;font-family:'JetBrains Mono',monospace;font-weight:500;
+  border:1px solid var(--border-strong);
+}
+.status-pill.status-green{color:var(--green);border-color:var(--green);}
+.status-pill.status-blue{color:var(--accent);border-color:var(--accent);}
+.status-pill.status-yellow{color:var(--yellow);border-color:var(--yellow);}
+
+.meta-row{display:flex;gap:18px;margin-top:10px;flex-wrap:wrap;}
+.meta-field{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.meta-field input{
+  background:none;border:1px solid var(--border-strong);color:var(--fg);
+  font-family:'JetBrains Mono',monospace;font-size:12px;padding:5px 8px;width:150px;
+}
+.meta-field input:hover{border-color:var(--accent);}
+.meta-field input:focus{outline:none;border-color:var(--accent);color:var(--fg);}
+.meta-field input[type="date"], .meta-field input[type="time"]{cursor:pointer;width:150px;}
+.meta-field input[type="date"]::-webkit-calendar-picker-indicator,
+.meta-field input[type="time"]::-webkit-calendar-picker-indicator{
+  filter:invert(0.85);cursor:pointer;padding:2px;
+}
+.meta-field label{color:var(--dim);text-transform:uppercase;letter-spacing:0.06em;font-size:10px;}
+
+.ring-wrap{display:flex;align-items:center;gap:14px;}
+.ring-num{font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:var(--accent);}
+.ring-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.08em;}
+
+.site-hero{
+  flex:0 0 auto;
+  padding:18px 24px;
+  background:#08090b;
+  border-bottom:1px solid var(--border);
+}
+.browser-mock{
+  border:1px solid var(--border-strong);
+  background:#0F1013;
+  display:flex;
+  flex-direction:column;
+  height:280px;
+  min-height:120px;
+  max-height:640px; /* the page scrolls now, so this is just a sensible ceiling, not load-bearing */
+  resize:vertical;
+  overflow:hidden;
+  position:relative;
+}
+.browser-mock::after{
+  /* small visual hint that the bottom edge is draggable, on top of the
+     native OS resize handle browsers already draw in that corner */
+  content:'';
+  position:absolute;right:2px;bottom:2px;width:9px;height:9px;
+  background:
+    linear-gradient(135deg, transparent 0 40%, var(--dim) 40% 46%, transparent 46% 60%, var(--dim) 60% 66%, transparent 66% 100%);
+  opacity:0.6;pointer-events:none;
+}
+.browser-bar{
+  flex:0 0 32px;
+  display:flex;align-items:center;gap:10px;
+  padding:0 12px;
+  background:var(--panel-2);
+  border-bottom:1px solid var(--border);
+}
+.browser-dots{display:flex;gap:5px;flex:0 0 auto;}
+.browser-dots span{width:7px;height:7px;border-radius:50%;background:var(--border-strong);display:block;}
+.browser-url{
+  flex:1;min-width:0;
+  font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);
+  background:var(--bg);border:1px solid var(--border);
+  padding:4px 10px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  text-align:center;
+}
+.browser-actions{flex:0 0 auto;display:flex;gap:4px;}
+.browser-actions .icon-btn{font-size:13px;padding:2px 5px;}
+.browser-body{
+  position:relative;
+  flex:1;
+  overflow:hidden !important;
+  background:#0F1013;
+}
+.browser-body img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  max-width:100%;
+  max-height:100%;
+  object-fit:cover;
+  object-position:top;
+  display:block;
+  cursor:pointer;
+}
+.site-hero--empty .browser-body{
+  display:flex;align-items:center;justify-content:center;
+  color:var(--dim);font-size:12px;text-align:center;padding:20px;cursor:default;
+}
+.site-shot-error{
+  width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+  padding:10px;color:var(--dim);font-size:11px;text-align:center;line-height:1.4;
+}
+
+.tabs{
+  flex:0 0 auto;
+  display:flex;gap:2px;padding:0 32px;border-bottom:1px solid var(--border);
+}
+.tab{
+  padding:13px 4px;margin-right:26px;font-size:13px;color:var(--dim);
+  background:none;border:none;border-bottom:2px solid transparent;
+  letter-spacing:0.03em;
+  font-family:'JetBrains Mono',monospace;text-transform:uppercase;
+}
+.tab.active{color:var(--fg);border-bottom-color:var(--accent);}
+.tab:hover{color:var(--fg);}
+
+.content{padding:28px 32px 80px;}
+
+/* ---------- PHASE / CHECKLIST ---------- */
+.phase{margin-bottom:30px;}
+.phase-head{display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.phase-title{
+  font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.1em;
+  text-transform:uppercase;color:var(--fg);
+}
+.phase-count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);}
+.phase-bar-track{flex:1;height:2px;background:var(--border);position:relative;}
+.phase-bar-fill{position:absolute;left:0;top:0;bottom:0;background:var(--accent);}
+
+.task-list{border-top:1px solid var(--border);}
+.task-row-wrap{border-bottom:1px solid var(--border);}
+.task-row{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;
+}
+.task-row.done .task-text{color:var(--dim);text-decoration:line-through;text-decoration-color:var(--border-strong);}
+
+.status-btn{
+  width:20px;height:20px;flex:0 0 20px;
+  border:1px solid var(--border-strong);
+  background:none;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.status-btn.progreso{border-color:var(--violet);}
+.status-btn.progreso::after{content:'';width:8px;height:8px;background:var(--violet);}
+.status-btn.listo{border-color:var(--accent);background:var(--accent);}
+.status-btn.listo::after{content:'✓';color:#0B0C0E;font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+
+.task-text{
+  flex:1;background:none;border:none;color:var(--fg);font-size:14px;
+  padding:2px 0;border-bottom:1px solid transparent;min-width:0;
+}
+.task-text:focus{outline:none;border-bottom:1px solid var(--border-strong);}
+
+.owner-tag{
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.05em;
+  color:var(--muted);background:none;border:1px solid var(--border);
+  padding:3px 7px;flex:0 0 auto;
+}
+.owner-tag:hover{border-color:var(--border-strong);}
+
+.task-comment{
+  width:150px;flex:0 0 150px;background:none;border:none;color:var(--dim);
+  font-size:11px;border-bottom:1px solid transparent;padding:2px 0;
+}
+.task-comment::placeholder{color:var(--dim);opacity:0.6;}
+.task-comment:focus{outline:none;border-bottom:1px solid var(--border-strong);color:var(--muted);}
+
+.validate-btn{
+  background:none;border:none;font-size:13px;padding:2px 5px;
+  opacity:0;flex:0 0 auto;filter:grayscale(1);
+}
+.task-row:hover .validate-btn{opacity:1;}
+.validate-btn:hover{filter:none;}
+
+.validator-result{
+  padding:0 0 10px 32px;display:flex;flex-wrap:wrap;gap:6px;
+}
+.validator-chip{
+  font-size:10px;padding:3px 7px;border:1px solid var(--border);color:var(--muted);
+}
+.validator-chip.ok{color:var(--accent);border-color:var(--accent);}
+.validator-chip.fail{color:var(--danger);border-color:var(--danger);}
+.validator-chip.unknown{color:var(--dim);border-color:var(--border);}
+
+.row-del{
+  background:none;border:none;color:var(--dim);font-size:15px;padding:2px 4px;
+  opacity:0;flex:0 0 auto;
+}
+.task-row:hover .row-del{opacity:1;}
+.row-del:hover{color:var(--danger);}
+
+.add-task{
+  display:flex;align-items:center;gap:10px;padding:10px 0 0 32px;
+}
+.add-task input{
+  flex:1;background:none;border:none;border-bottom:1px dashed var(--border-strong);
+  color:var(--muted);font-size:13px;padding:5px 0;
+}
+.add-task input::placeholder{color:var(--dim);}
+.add-task input:focus{outline:none;border-bottom-color:var(--accent);color:var(--fg);}
+.add-task span{color:var(--dim);font-size:16px;}
+
+/* ---------- DNS ---------- */
+.dns-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;}
+.dns-note{font-size:12px;color:var(--dim);max-width:560px;line-height:1.6;}
+.btn{
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.05em;text-transform:uppercase;
+  border:1px solid var(--border-strong);background:none;color:var(--fg);padding:9px 16px;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent);}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#0B0C0E;font-weight:700;}
+.btn.primary:hover{background:#6dc6ff;color:#0B0C0E;}
+.btn:disabled{opacity:0.4;cursor:default;}
+
+.dns-table{width:100%;border-collapse:collapse;}
+.dns-table th{
+  text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.08em;
+  text-transform:uppercase;color:var(--dim);font-weight:500;padding:0 10px 10px 0;
+  border-bottom:1px solid var(--border);
+}
+.dns-table td{
+  padding:11px 10px 11px 0;border-bottom:1px solid var(--border);vertical-align:middle;
+}
+.dns-table input, .dns-table select{
+  background:none;border:none;color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:12px;
+  border-bottom:1px solid transparent;padding:3px 0;width:100%;
+}
+.dns-table input:focus, .dns-table select:focus{outline:none;border-bottom-color:var(--accent);}
+.dns-table select{color:var(--muted);}
+.dns-table option{background:var(--panel);color:var(--fg);}
+
+.dns-badge{
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.04em;
+  padding:4px 8px;display:inline-block;white-space:nowrap;
+}
+.dns-badge.match{color:var(--accent);border:1px solid var(--accent);}
+.dns-badge.mismatch{color:var(--danger);border:1px solid var(--danger);}
+.dns-badge.unknown{color:var(--dim);border:1px solid var(--border);}
+.dns-badge.checking{color:var(--violet);border:1px solid var(--violet);}
+
+.dns-actual{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);word-break:break-all;}
+.dns-fqdn{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);margin-top:2px;word-break:break-all;}
+
+.icon-btn{background:none;border:none;color:var(--dim);font-size:14px;padding:4px 6px;}
+.icon-btn:hover{color:var(--accent);}
+
+.add-dns-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center;}
+.add-dns-row select, .add-dns-row input{
+  background:none;border:1px solid var(--border);color:var(--fg);
+  font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px 10px;
+}
+.add-dns-row input{flex:1;min-width:120px;}
+.add-dns-row select{color:var(--muted);}
+
+.footer-hint{
+  margin-top:22px;font-size:11px;color:var(--dim);border-top:1px solid var(--border);padding-top:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.footer-hint a{color:var(--accent);text-decoration:none;}
+.footer-hint a:hover{text-decoration:underline;}
+
+@media (max-width:800px){
+  #root{flex-direction:column;}
+  .sidebar{width:100%;flex:none;position:static;height:auto;max-height:200px;}
+  .task-comment{display:none;}
+  .topbar{flex-direction:column;}
+  .browser-mock{height:170px;}
+  .site-hero{padding:12px 16px;}
+}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div id="root"></div>
+<script>
+window.__DEFAULT_TEMPLATE__ = {
+  tasks: [
+    {phase:"pre", text:"Crear usuarios backoffice", owner:"P"},
+    {phase:"pre", text:"Sesión de inducción Shopify (equipo SAC)", owner:"P"},
+    {phase:"pre", text:"Compra de licencia Shopify", owner:"A"},
+    {phase:"pre", text:"Launcheck Shopify", owner:"P"},
+    {phase:"pre", text:"Prueba de sync de stock", owner:"P"},
+    {phase:"pre", text:"Prueba de compra e inyección (ERP/SAP)", owner:"P&A"},
+    {phase:"go", text:"Desactivar métodos de pago y envío de testing", owner:"P"},
+    {phase:"go", text:"Sync de precio y stock", owner:"P"},
+    {phase:"go", text:"Cambiar DNS / dominios", owner:"A"},
+    {phase:"go", text:"Cambiar DNS para validación de dominio y correos", owner:"A"},
+    {phase:"go", text:"Crear usuarios y roles en la organización", owner:"A"},
+    {phase:"go", text:"Pruebas operativas de tarificación / fulfillment", owner:"P&A"},
+    {phase:"go", text:"Configurar canal de ventas Meta", owner:"P&A"},
+    {phase:"go", text:"Configurar canal de ventas Google", owner:"P&A"},
+    {phase:"go", text:"Probar flujos de venta productivos end to end", owner:"P&A"},
+    {phase:"go", text:"Revisión de GA4 y trackeo en vivo", owner:"P"},
+    {phase:"go", text:"Revisión de políticas (envío, T&C, devoluciones, privacidad)", owner:"P&A"},
+    {phase:"go", text:"Revisión visual completa del sitio y formularios de contacto", owner:"P&A"},
+    {phase:"go", text:"Verificar sitemap.xml y robots.txt", owner:"P"},
+    {phase:"go", text:"Cambio de banners, links y site builder", owner:"A"},
+    {phase:"post", text:"Ajustar redirecciones SEO 301", owner:"P"},
+    {phase:"post", text:"Monitoreo intensivo primeras 48–72 horas", owner:"P"},
+    {phase:"post", text:"Ajuste de permisos / perfiles", owner:"P"},
+    {phase:"post", text:"Cambio de tienda principal", owner:"A"},
+    {phase:"post", text:"Traspaso de owner de Shopify", owner:"A"}
+  ],
+  dns: [
+    {type:"A", name:"@", value:"23.227.38.65"},
+    {type:"CNAME", name:"www", value:"shops.myshopify.com"}
+  ]
+};
+</script>
+<script>
+/* ======================= SUPABASE (shared, real-time state) =======================
+   Pegá acá tu Project URL y anon key (Supabase > Project Settings > API).
+   Con ambos vacíos, la app sigue funcionando pero en modo local (sin compartir). */
+const SUPABASE_URL = "https://zqickxvsynrrvkvhkpgf.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_xnbj9eYzdT6PuKT2121yAw_7BuFEN77";
+const SHARED_ROW_ID = "shared";
+
+let sb = null;
+let CLOUD_MODE = false;
+if(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase){
+  try{
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    CLOUD_MODE = true;
+  }catch(e){ console.error("No se pudo inicializar Supabase, sigo en modo local", e); }
+}
+
+/* ======================= LOCAL STORAGE SHIM (fallback) ======================= */
+// window.storage only exists inside claude.ai artifacts. Hosted standalone
+// (Netlify, GitHub Pages, your own server, etc.) it falls back to
+// localStorage — per-browser only, used when CLOUD_MODE is off or fails.
+if(!window.storage){
+  window.storage = {
+    async get(key){ try{ const v = window.localStorage.getItem(key); return v===null ? null : {key, value:v, shared:false}; }catch(e){ return null; } },
+    async set(key, value){ try{ window.localStorage.setItem(key, value); return {key, value, shared:false}; }catch(e){ return null; } },
+    async delete(key){ try{ window.localStorage.removeItem(key); return {key, deleted:true, shared:false}; }catch(e){ return null; } },
+    async list(prefix){ try{ const keys = Object.keys(window.localStorage).filter(k => !prefix || k.startsWith(prefix)); return {keys}; }catch(e){ return null; } }
+  };
+}
+
+/* ======================= STATE ======================= */
+let STATE = { order: [], clients: {}, activeId: null, orgs:{}, orgOrder:[] };
+let ACTIVE_TAB = "checklist";
+const STORAGE_KEY = "launch-control-state-v1";
+let applyingRemote = false; // true while STATE was just overwritten by a realtime event
+
+// Reads ?org=<slug> from the URL once at startup. If it matches a real org,
+// the whole app scopes down to just that org's stores — this is how each
+// agency client gets a link that only shows their own launches. It's an
+// unguessable-slug scheme, not a real login: anyone with the link sees that
+// org, but can't browse to another org's data or discover it exists.
+const URL_ORG_SLUG = new URLSearchParams(window.location.search).get("org");
+let SCOPED_ORG_ID = null; // resolved once STATE is loaded
+
+function makeOrgSlug(){
+  return Math.random().toString(36).slice(2,8) + Math.random().toString(36).slice(2,6);
+}
+
+function orgShareLink(org){
+  return `${window.location.origin}${window.location.pathname}?org=${org.slug}`;
+}
+
+// Older saved state won't have orgs/orgOrder, or stores without an orgId —
+// give any orphaned stores a home instead of losing the grouping silently.
+function migrateOrgs(){
+  if(!STATE.orgs) STATE.orgs = {};
+  if(!STATE.orgOrder) STATE.orgOrder = [];
+  const orphanIds = STATE.order.filter(id => {
+    const c = STATE.clients[id];
+    return c && !c.orgId;
+  });
+  if(orphanIds.length){
+    let bucket = Object.values(STATE.orgs).find(o => o.name === "Sin cliente asignado");
+    if(!bucket){
+      bucket = { id: uid("org"), name: "Sin cliente asignado", slug: makeOrgSlug() };
+      STATE.orgs[bucket.id] = bucket;
+      STATE.orgOrder.push(bucket.id);
+    }
+    orphanIds.forEach(id => { STATE.clients[id].orgId = bucket.id; });
+  }
+}
+
+function uid(prefix){ return prefix + "_" + Math.random().toString(36).slice(2,9); }
+
+function defaultClient(name, orgId){
+  const t = window.__DEFAULT_TEMPLATE__;
+  return {
+    id: uid("client"),
+    name: name || "Nueva tienda",
+    orgId: orgId || null,
+    domain: "",
+    launchDate: "",
+    meetTime: "",
+    siteHeight: 280,
+    tasks: t.tasks.map(x => ({ id: uid("task"), phase:x.phase, text:x.text, owner:x.owner, status:"pendiente", comment:"" })),
+    dns: t.dns.map(x => ({ id: uid("dns"), type:x.type, name:x.name, value:x.value, actual:null, checkStatus:"unknown" }))
+  };
+}
+
+const SITE_HEIGHT_MIN = 120;
+const SITE_HEIGHT_MAX = 640;
+const SITE_HEIGHT_STEP = 40;
+
+/* ======================= PERSISTENCE ======================= */
+async function loadState(){
+  if(CLOUD_MODE){
+    try{
+      const { data, error } = await sb.from("launch_control").select("state").eq("id", SHARED_ROW_ID).maybeSingle();
+      if(error) throw error;
+      if(data && data.state && data.state.clients){
+        STATE = data.state;
+      }else{
+        STATE = { order: [], clients: {}, activeId: null, orgs:{}, orgOrder:[] };
+        await sb.from("launch_control").upsert({ id: SHARED_ROW_ID, state: STATE, updated_at: new Date().toISOString() });
+      }
+      migrateOrgs();
+      if(!STATE.activeId && STATE.order.length) STATE.activeId = STATE.order[0];
+      subscribeRealtime();
+      return;
+    }catch(e){
+      console.error("No se pudo conectar a Supabase, sigo en modo local", e);
+      CLOUD_MODE = false; // fall through to local branch below
+    }
+  }
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      if(parsed && parsed.clients){
+        STATE = parsed;
+        migrateOrgs();
+        if(!STATE.activeId && STATE.order.length) STATE.activeId = STATE.order[0];
+        return;
+      }
+    }
+  }catch(e){ /* no saved state yet */ }
+  STATE = { order: [], clients: {}, activeId: null, orgs:{}, orgOrder:[] };
+}
+
+let saveTimer = null;
+function saveState(){
+  if(applyingRemote) return; // don't echo back a change that just arrived from someone else
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    if(CLOUD_MODE){
+      try{
+        const { error } = await sb.from("launch_control").upsert({ id: SHARED_ROW_ID, state: STATE, updated_at: new Date().toISOString() });
+        if(error) console.error("No se pudo guardar en Supabase", error);
+      }catch(e){ console.error("No se pudo guardar en Supabase", e); }
+      return;
+    }
+    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(STATE), false); }
+    catch(e){ console.error("No se pudo guardar", e); }
+  }, 300);
+}
+
+function subscribeRealtime(){
+  if(!CLOUD_MODE) return;
+  sb.channel("launch_control_sync")
+    .on("postgres_changes", { event: "*", schema: "public", table: "launch_control", filter: `id=eq.${SHARED_ROW_ID}` }, (payload) => {
+      if(payload.new && payload.new.state && payload.new.state.clients){
+        // If typing in a field right now, don't yank it out from under the person —
+        // apply next time they click away or on the next remote change.
+        if(document.activeElement && ["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName)) return;
+        applyingRemote = true;
+        const keepActive = STATE.activeId;
+        STATE = payload.new.state;
+        if(STATE.clients[keepActive]) STATE.activeId = keepActive; // don't hijack the tab you're looking at
+        else if(!STATE.activeId && STATE.order.length) STATE.activeId = STATE.order[0];
+        render();
+        applyingRemote = false;
+      }
+    })
+    .subscribe();
+}
+
+/* ======================= HELPERS ======================= */
+const PHASES = [
+  {id:"pre", label:"Pre Go-Live"},
+  {id:"go", label:"Go-Live"},
+  {id:"post", label:"Post Go-Live"}
+];
+
+function activeClient(){ return STATE.clients[STATE.activeId] || null; }
+
+function overallProgress(client){
+  if(!client.tasks.length) return 0;
+  const done = client.tasks.filter(t=>t.status==="listo").length;
+  return Math.round((done/client.tasks.length)*100);
+}
+function phaseProgress(client, phaseId){
+  const list = client.tasks.filter(t=>t.phase===phaseId);
+  if(!list.length) return {done:0,total:0,pct:0};
+  const done = list.filter(t=>t.status==="listo").length;
+  return {done, total:list.length, pct: Math.round((done/list.length)*100)};
+}
+
+function launchBadge(client){
+  const pct = overallProgress(client);
+  if(!client.launchDate) return {color:"yellow", text:"SIN FECHA"};
+  const now = new Date();
+  const launch = new Date(client.launchDate + "T" + (client.meetTime || "00:00"));
+  const diffMs = launch - now;
+  const diffDays = Math.ceil(diffMs / (1000*60*60*24));
+  const isLive = diffDays <= 0; // launch date has arrived (today or already passed)
+
+  if(!isLive) return {color:"yellow", text:"T-" + diffDays + "D"}; // not live yet — in progress or not
+  if(pct === 100) return {color:"green", text: diffDays===0 ? "LIVE · COMPLETO" : "COMPLETO"}; // live + 100% done
+  return {color:"blue", text: diffDays===0 ? "HOY · LIVE" : "EN VIVO"}; // live but checklist not finished
+}
+
+function escapeHtml(s){
+  return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+/* ======================= RENDER: SIDEBAR ======================= */
+function renderMissionRow(id){
+  const c = STATE.clients[id];
+  if(!c) return "";
+  const pct = overallProgress(c);
+  const badge = launchBadge(c);
+  return `
+    <div class="mission ${id===STATE.activeId ? 'active':''}" data-select-client="${id}" data-drag-id="${id}" draggable="true">
+      <span class="mission-handle" title="Arrastrar para reordenar">⠿</span>
+      <div class="mission-dot dot-${badge.color}"></div>
+      <div class="mission-body">
+        <div class="mission-name">${escapeHtml(c.name)}</div>
+        <div class="mission-meta mono">${badge.text}</div>
+      </div>
+      <div class="mission-pct mono">${pct}%</div>
+      <button class="mission-del" data-del-client="${id}" title="Eliminar">✕</button>
+    </div>`;
+}
+
+function renderSidebar(){
+  const brand = `
+      <div class="brand">
+        <div class="brand-kicker mono">Propultech</div>
+        <div class="brand-title">Launch Control</div>
+        <div class="brand-sub mono">Torre de control de lanzamientos</div>
+        <div class="sync-badge mono ${CLOUD_MODE ? 'live' : 'local'}">${CLOUD_MODE ? '● en vivo · compartido' : '● modo local (sin compartir)'}</div>
+        <div class="build-tag mono">build 2026-09-04 · v27 (cambiar clave desde la app)</div>
+      </div>`;
+
+  // Client-scoped view (?org=<slug> matched a real org): only that org's
+  // stores, no visible way to discover or switch to any other org.
+  if(SCOPED_ORG_ID){
+    const org = STATE.orgs[SCOPED_ORG_ID];
+    const storeIds = STATE.order.filter(id => STATE.clients[id] && STATE.clients[id].orgId === SCOPED_ORG_ID);
+    const rows = storeIds.map(renderMissionRow).join("");
+    return `
+      <div class="sidebar">
+        ${brand}
+        <div class="missions">
+          <div class="missions-label mono">${escapeHtml(org ? org.name : "Cliente")}</div>
+          ${rows || `<div style="padding:10px 20px;color:var(--dim);font-size:12px;">Aún no hay tiendas cargadas.</div>`}
+        </div>
+        <button class="add-mission" id="btn-add-client">
+          <span style="font-size:15px;">+</span> Nueva tienda
+        </button>
+      </div>`;
+  }
+
+  // Admin / internal view: every org, grouped, each with its own shareable link.
+  const orgSections = STATE.orgOrder.map(orgId => {
+    const org = STATE.orgs[orgId];
+    if(!org) return "";
+    const storeIds = STATE.order.filter(id => STATE.clients[id] && STATE.clients[id].orgId === orgId);
+    const rows = storeIds.map(renderMissionRow).join("");
+    return `
+      <div class="org-section" data-org-drop="${org.id}">
+        <div class="org-header">
+          <input class="org-name" data-edit-org="${org.id}" value="${escapeHtml(org.name)}" title="Renombrar cliente" />
+          <div class="org-actions">
+            <button class="icon-btn" data-copy-org-link="${org.id}" title="Copiar link para este cliente">🔗</button>
+            <button class="icon-btn" data-add-store-org="${org.id}" title="Agregar tienda a este cliente">+</button>
+            <button class="icon-btn" data-del-org="${org.id}" title="Eliminar cliente">✕</button>
+          </div>
+        </div>
+        ${rows || `<div class="org-empty mono">sin tiendas todavía — arrastrá una acá</div>`}
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="sidebar">
+      ${brand}
+      <div class="missions">
+        ${orgSections || `<div style="padding:10px 20px;color:var(--dim);font-size:12px;">Aún no hay clientes cargados.</div>`}
+      </div>
+      <button class="add-mission" id="btn-add-org">
+        <span style="font-size:15px;">+</span> Nuevo cliente
+      </button>
+      <button class="change-pass-link mono" id="btn-change-admin-pass">🔒 Cambiar clave de acceso</button>
+    </div>`;
+}
+
+/* ======================= RENDER: CHECKLIST TAB ======================= */
+/* ======================= TASK VALIDATORS ======================= */
+// Each validator can automatically check a specific checklist item against
+// the client's real domain. Match by keywords in the task text so it keeps
+// working even if the person edits the wording a bit. Extend this array to
+// wire up more automatic checks later.
+let VALIDATION_RESULTS = {}; // taskId -> {status:'checking'|'done', checks:[{label, ok, note}]}
+
+// Tries a direct cross-origin fetch first (fastest, works when the target
+// site allows it). If the browser blocks it (the common case — most sites
+// don't send CORS headers on ordinary pages), falls back through a couple of
+// free public CORS proxies so we can still read the content automatically.
+// Those proxies are unofficial third-party services with no uptime
+// guarantee — sometimes they're down, and free tiers often throttle
+// datacenter/bot traffic while still working fine from an ordinary browser —
+// so this is a best-effort chain, not something to depend on. If everything
+// fails, the caller should fall back to a manual "open this link" note.
+const CORS_PROXIES = [
+  (url) => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+  (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+];
+
+async function fetchViaProxy(buildProxyUrl, url, timeoutMs){
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), timeoutMs);
+  try{
+    const resp = await fetch(buildProxyUrl(url), { signal:controller.signal, cache:"no-store" });
+    clearTimeout(timer);
+    if(!resp.ok) return null;
+    const raw = await resp.text();
+    // allorigins wraps the real content in {"contents": "..."}; codetabs (and similar)
+    // return the raw body directly — detect which shape we got.
+    try{
+      const data = JSON.parse(raw);
+      if(typeof data.contents === "string" && data.contents) return data.contents;
+    }catch(e){ /* not JSON — treat raw as the body itself */ }
+    return raw || null;
+  }catch(e){
+    clearTimeout(timer);
+    return null;
+  }
+}
+
+async function fetchTextSmart(url, timeoutMs){
+  timeoutMs = timeoutMs || 6000;
+  try{
+    const resp = await fetch(url, { mode:"cors", cache:"no-store" });
+    if(resp.ok) return { ok:true, status:resp.status, body: await resp.text(), via:"direct" };
+    return { ok:false, status:resp.status, body:null, via:"direct" };
+  }catch(directErr){
+    for(const buildProxyUrl of CORS_PROXIES){
+      const body = await fetchViaProxy(buildProxyUrl, url, timeoutMs);
+      if(body) return { ok:true, status:null, body, via:"proxy" };
+    }
+    return { ok:false, status:null, body:null, via:"blocked" };
+  }
+}
+
+// Reachability check that never depends on CORS or a proxy at all. A plain
+// GET in "no-cors" mode can't be read (opaque response — status is always 0,
+// ok is always false), but the fetch *promise* still tells us something real:
+// it resolves as soon as ANY HTTP response comes back from the server (a 404
+// page counts), and only *rejects* on a genuine network-level failure — DNS
+// not resolving yet, TLS/SSL handshake failing, connection refused, timeout.
+// That's exactly the signal a go-live check needs: "is this domain answering
+// at all right now," without needing the target's cooperation.
+function checkSiteReachable(base, timeoutMs){
+  timeoutMs = timeoutMs || 8000;
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), timeoutMs);
+  return fetch(`${base}/?_lc=${Date.now()}`, { mode:"no-cors", cache:"no-store", signal:controller.signal })
+    .then(() => { clearTimeout(timer); return { ok:true, note:"el dominio responde" }; })
+    .catch((e) => {
+      clearTimeout(timer);
+      if(e && e.name === "AbortError") return { ok:null, note:"sin respuesta en 8s — puede estar lento o el DNS aún no propagó del todo" };
+      return { ok:false, note:"no responde (DNS, SSL o conexión) — puede que el DNS todavía no haya propagado" };
+    });
+}
+
+const TASK_VALIDATORS = [
+  {
+    id: "sitemap-robots",
+    label: "Verificar robots.txt y sitemap.xml",
+    match: (text) => /robots\.txt/i.test(text) || (/sitemap/i.test(text) && /robots/i.test(text)),
+    run: async (client, base) => {
+      const paths = [
+        { path: "/robots.txt", label: "robots.txt", isValid: (body) => /user-agent/i.test(body) },
+        { path: "/sitemap.xml", label: "sitemap.xml", isValid: (body) => /<urlset|<sitemapindex/i.test(body) }
+      ];
+      const results = await Promise.all(paths.map(async (p) => {
+        const r = await fetchTextSmart(base + p.path, 5500);
+        if(!r.ok){
+          return { label:p.label, ok:null, note:`no se pudo leer (directo ni por proxy) — abrí ${base}${p.path} para chequearlo a mano` };
+        }
+        const valid = p.isValid(r.body);
+        const viaNote = r.via === "proxy" ? " · vía proxy" : "";
+        return { label:p.label, ok:valid, note:(valid ? "OK" : "existe, pero el contenido no es el esperado") + viaNote };
+      }));
+      return results;
+    }
+  },
+  {
+    id: "ga4-tracking",
+    label: "Verificar GA4 / Tag Manager en el sitio",
+    match: (text) => /\bga4\b|google analytics|trackeo|tag manager|\bgtm\b/i.test(text),
+    run: async (client, base) => {
+      const r = await fetchTextSmart(base, 5500);
+      if(!r.ok){
+        return [{ label:"GA4 / GTM", ok:null, note:`no se pudo leer el HTML (directo ni por proxy) — abrí ${base} y revisá con Tag Assistant o el inspector de red` }];
+      }
+      const html = r.body;
+      const ga4Match = html.match(/G-[A-Z0-9]{6,}/);
+      const gtmMatch = html.match(/GTM-[A-Z0-9]{4,}/);
+      const hasGtagScript = /googletagmanager\.com\/gtag\/js/i.test(html);
+      const viaNote = r.via === "proxy" ? " · vía proxy" : "";
+      return [
+        { label:"GA4", ok: !!(ga4Match || hasGtagScript), note:(ga4Match ? ga4Match[0] : (hasGtagScript ? "script gtag detectado" : "no encontrado en el HTML inicial")) + viaNote },
+        { label:"Google Tag Manager", ok: !!gtmMatch, note:(gtmMatch ? gtmMatch[0] : "no encontrado en el HTML inicial") + viaNote }
+      ];
+    }
+  },
+  {
+    id: "dns-summary",
+    label: "Verificar todos los registros DNS",
+    match: (text) => /\bdns\b/i.test(text),
+    run: async (client) => {
+      if(!client.dns.length) return [{ label:"registros DNS", ok:null, note:"no hay registros cargados — agregalos en la pestaña DNS" }];
+      await Promise.all(client.dns.map(rec => checkDnsRecord(client, rec)));
+      return client.dns.map(rec => ({
+        label: `${rec.type} ${rec.name}`,
+        ok: rec.checkStatus === "match" ? true : rec.checkStatus === "mismatch" ? false : null,
+        note: rec.checkStatus === "match" ? "coincide"
+            : rec.checkStatus === "mismatch" ? "no coincide"
+            : rec.checkStatus === "error" ? "sin respuesta"
+            : "revisalo en la pestaña DNS"
+      }));
+    }
+  },
+  {
+    id: "site-reachable",
+    label: "Verificar que el sitio responda",
+    // covers the tasks where "is the store actually up right now" is the real
+    // question — visual review and the 48-72h monitoring window alike.
+    match: (text) => /revisi[oó]n visual completa|monitoreo intensivo/i.test(text),
+    run: async (client, base) => {
+      const r = await checkSiteReachable(base);
+      return [{ label:client.domain, ok:r.ok, note:r.note }];
+    }
+  },
+  {
+    id: "policies",
+    label: "Verificar páginas de políticas",
+    match: (text) => /revisi[oó]n de pol[ií]ticas/i.test(text),
+    run: async (client, base) => {
+      // standard Shopify policy paths — auto-generated for every store, so
+      // this is a solid check specifically when the client runs on Shopify.
+      const paths = [
+        { path: "/policies/refund-policy", label: "devoluciones" },
+        { path: "/policies/shipping-policy", label: "envío" },
+        { path: "/policies/terms-of-service", label: "términos" },
+        { path: "/policies/privacy-policy", label: "privacidad" }
+      ];
+      return Promise.all(paths.map(async (p) => {
+        const r = await fetchTextSmart(base + p.path, 5500);
+        if(!r.ok) return { label:p.label, ok:null, note:`no se pudo leer — abrí ${base}${p.path} a mano` };
+        const looksLikeRealPolicy = r.body.length > 200 && !/página no encontrada|page not found|404/i.test(r.body);
+        const viaNote = r.via === "proxy" ? " · vía proxy" : "";
+        return { label:p.label, ok:looksLikeRealPolicy, note:(looksLikeRealPolicy ? "publicada" : "vacía o no encontrada") + viaNote };
+      }));
+    }
+  }
+];
+
+function findValidator(taskText){
+  return TASK_VALIDATORS.find(v => v.match(taskText)) || null;
+}
+
+/* ======================= TASK QUICK LINKS ======================= */
+// Lighter-weight than a validator: no pass/fail, just a one-click shortcut to
+// the real place a person would go check or do this task — the storefront,
+// the specific file, or the right external tool (Meta, Google, Shopify
+// admin). Covers tasks a true automated check can't reach (admin actions
+// behind a login) with something still genuinely useful.
+function siteUrl(client, path){
+  if(!client.domain) return null;
+  const base = client.domain.startsWith("http") ? client.domain : `https://${client.domain}`;
+  return path ? base + path : base;
+}
+
+// Shopify's newer admin lives at admin.shopify.com/store/<handle>, but every
+// <handle>.myshopify.com/admin/... URL still redirects there correctly — and
+// the handle is usually sitting right in the DNS records already (the "www"
+// CNAME target), so we can derive a real admin link without asking for it twice.
+function getShopifyAdminBase(client){
+  if(!client.dns) return null;
+  const cname = client.dns.find(r => r.type === "CNAME" && /\.myshopify\.com\/?$/i.test((r.value||"").trim()));
+  if(!cname) return null;
+  const handle = cname.value.trim().replace(/^https?:\/\//,"").replace(/\/+$/,"");
+  if(!/\.myshopify\.com$/i.test(handle)) return null;
+  return `https://${handle}/admin`;
+}
+
+const TASK_LINKS = [
+  { match: t => /crear usuarios backoffice|usuarios y roles en la organizaci[oó]n|ajuste de permisos/i.test(t),
+    label: "Usuarios y cuenta", getUrl: (c,admin) => admin ? `${admin}/settings/account` : null },
+  { match: t => /compra de licencia shopify/i.test(t),
+    label: "Facturación Shopify", getUrl: (c,admin) => admin ? `${admin}/settings/billing` : "https://www.shopify.com/pricing" },
+  { match: t => /launcheck shopify/i.test(t),
+    label: "Launch checklist de Shopify", getUrl: () => "https://www.shopify.com/tools/launch-checklist" },
+  { match: t => /desactivar m[eé]todos de pago/i.test(t),
+    label: "Métodos de pago y envío", getUrl: (c,admin) => admin ? `${admin}/settings/payments` : null },
+  { match: t => /canal de ventas meta/i.test(t),
+    label: "Meta Commerce Manager", getUrl: () => "https://business.facebook.com/commerce/" },
+  { match: t => /canal de ventas? google|canal de venta google/i.test(t),
+    label: "Google Merchant Center", getUrl: () => "https://merchants.google.com/" },
+  { match: t => /probar flujos de venta productivos/i.test(t),
+    label: "Abrir la tienda", getUrl: (c) => siteUrl(c) },
+  { match: t => /ga4|google analytics|tag manager|\bgtm\b/i.test(t),
+    label: "Google Analytics", getUrl: () => "https://analytics.google.com/" },
+  { match: t => /cambio de banners|site builder/i.test(t),
+    label: "Editor de temas", getUrl: (c,admin) => admin ? `${admin}/themes` : siteUrl(c) },
+  { match: t => /revisi[oó]n visual completa/i.test(t),
+    label: "Abrir la tienda", getUrl: (c) => siteUrl(c) },
+  { match: t => /ajustar redirecciones seo 301/i.test(t),
+    label: "Redirecciones de URL", getUrl: (c,admin) => admin ? `${admin}/settings/redirects` : null },
+  { match: t => /monitoreo intensivo/i.test(t),
+    label: "Abrir la tienda", getUrl: (c) => siteUrl(c) },
+  { match: t => /cambio de tienda principal|traspaso de owner/i.test(t),
+    label: "Configuración de la cuenta", getUrl: (c,admin) => admin ? `${admin}/settings/account` : null },
+  { match: t => /robots\.txt/i.test(t) && !/sitemap/i.test(t),
+    label: "Abrir robots.txt", getUrl: (c) => siteUrl(c, "/robots.txt") },
+  { match: t => /sitemap/i.test(t) && /robots/i.test(t),
+    label: "Abrir robots.txt", getUrl: (c) => siteUrl(c, "/robots.txt") }
+];
+
+function findLink(taskText, client, adminBase){
+  const entry = TASK_LINKS.find(l => l.match(taskText));
+  if(!entry) return null;
+  const url = entry.getUrl(client, adminBase);
+  if(!url) return null;
+  return { label: entry.label, url };
+}
+
+function renderValidatorResult(taskId){
+  const r = VALIDATION_RESULTS[taskId];
+  if(!r) return "";
+  if(r.status === "checking"){
+    return `<div class="validator-result mono">verificando…</div>`;
+  }
+  const chips = r.checks.map(c => {
+    const cls = c.ok === true ? "ok" : c.ok === false ? "fail" : "unknown";
+    const icon = c.ok === true ? "✓" : c.ok === false ? "✕" : "?";
+    return `<span class="validator-chip ${cls}">${icon} ${escapeHtml(c.label)}${c.note ? ` — ${escapeHtml(c.note)}` : ""}</span>`;
+  }).join("");
+  return `<div class="validator-result mono">${chips}</div>`;
+}
+
+async function runValidator(client, taskId, validatorId){
+  const validator = TASK_VALIDATORS.find(v => v.id === validatorId);
+  if(!validator) return;
+  if(!client.domain){
+    VALIDATION_RESULTS[taskId] = { status:"done", checks:[{label:"dominio", ok:false, note:"cargá el dominio final arriba primero"}] };
+    render();
+    return;
+  }
+  VALIDATION_RESULTS[taskId] = { status:"checking" };
+  render();
+
+  const base = client.domain.startsWith("http") ? client.domain : `https://${client.domain}`;
+  let checks;
+  try{
+    checks = await validator.run(client, base);
+  }catch(e){
+    checks = [{ label:"validador", ok:null, note:"ocurrió un error inesperado al verificar" }];
+  }
+  VALIDATION_RESULTS[taskId] = { status:"done", checks };
+  render();
+}
+
+function renderChecklist(client){
+  const adminBase = getShopifyAdminBase(client);
+  const isDnsTask = (text) => /\bdns\b/i.test(text);
+  return PHASES.map(ph => {
+    const list = client.tasks.filter(t=>t.phase===ph.id);
+    const prog = phaseProgress(client, ph.id);
+    const rows = list.map(t => {
+      const validator = findValidator(t.text);
+      const link = findLink(t.text, client, adminBase);
+      const goDns = isDnsTask(t.text);
+      return `
+      <div class="task-row-wrap">
+        <div class="task-row ${t.status==='listo'?'done':''}" data-task-id="${t.id}">
+          <button class="status-btn ${t.status}" data-cycle-status="${t.id}" title="Cambiar estado"></button>
+          <input class="task-text" data-edit-task="${t.id}" value="${escapeHtml(t.text)}" />
+          <button class="owner-tag" data-cycle-owner="${t.id}" title="Responsable">${escapeHtml(t.owner)}</button>
+          <input class="task-comment" data-edit-comment="${t.id}" placeholder="comentario…" value="${escapeHtml(t.comment)}" />
+          ${validator ? `<button class="validate-btn" data-validate-task="${t.id}" data-validator-id="${validator.id}" title="${validator.label}">🔎</button>` : ""}
+          ${goDns ? `<button class="validate-btn" data-goto-dns-tab="1" title="Ir a la pestaña DNS">📡</button>` : ""}
+          ${link ? `<a class="validate-btn" href="${escapeHtml(link.url)}" target="_blank" rel="noopener" title="${escapeHtml(link.label)}">🔗</a>` : ""}
+          <button class="row-del" data-del-task="${t.id}" title="Eliminar">✕</button>
+        </div>
+        ${validator ? renderValidatorResult(t.id) : ""}
+      </div>
+    `;
+    }).join("");
+
+    return `
+      <div class="phase">
+        <div class="phase-head">
+          <div class="phase-title">${ph.label}</div>
+          <div class="phase-bar-track"><div class="phase-bar-fill" style="width:${prog.pct}%"></div></div>
+          <div class="phase-count mono">${prog.done}/${prog.total}</div>
+        </div>
+        <div class="task-list">
+          ${rows || `<div style="padding:14px 0;color:var(--dim);font-size:12px;">Sin tareas en esta fase.</div>`}
+        </div>
+        <div class="add-task">
+          <span>+</span>
+          <input type="text" placeholder="Agregar tarea y presionar Enter…" data-new-task="${ph.id}" />
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+/* ======================= RENDER: DNS TAB ======================= */
+function dnsBadge(rec){
+  if(rec.checkStatus === "checking") return `<span class="dns-badge checking mono">verificando…</span>`;
+  if(rec.checkStatus === "match") return `<span class="dns-badge match mono">✓ coincide</span>`;
+  if(rec.checkStatus === "mismatch") return `<span class="dns-badge mismatch mono">✕ no coincide</span>`;
+  if(rec.checkStatus === "error") return `<span class="dns-badge unknown mono">sin datos</span>`;
+  return `<span class="dns-badge unknown mono">sin verificar</span>`;
+}
+
+function renderDns(client){
+  const noDomain = !client.domain;
+  const rows = client.dns.map(rec => `
+    <tr data-dns-id="${rec.id}">
+      <td style="width:90px;">
+        <select data-dns-field="type" data-dns-id="${rec.id}">
+          ${["A","CNAME","TXT","MX"].map(t=>`<option value="${t}" ${t===rec.type?'selected':''}>${t}</option>`).join("")}
+        </select>
+      </td>
+      <td style="width:170px;">
+        <input data-dns-field="name" data-dns-id="${rec.id}" value="${escapeHtml(rec.name)}" placeholder="@ / www / …" />
+        <div class="dns-fqdn mono">${escapeHtml(fqdn(rec.name, client.domain) || '')}</div>
+      </td>
+      <td><input data-dns-field="value" data-dns-id="${rec.id}" value="${escapeHtml(rec.value)}" placeholder="valor esperado" /></td>
+      <td style="width:210px;">
+        <div class="dns-actual">${rec.actual ? escapeHtml(rec.actual) : '—'}</div>
+      </td>
+      <td style="width:130px;">${dnsBadge(rec)}</td>
+      <td style="width:90px;white-space:nowrap;">
+        <button class="icon-btn" data-check-dns="${rec.id}" title="Verificar">⟳</button>
+        <a class="icon-btn" href="${propagationUrl(rec, client.domain)}" target="_blank" rel="noopener" title="Ver propagación global de este registro">↗</a>
+        <button class="icon-btn" data-del-dns="${rec.id}" title="Eliminar">✕</button>
+      </td>
+    </tr>
+  `).join("");
+
+  return `
+    <div class="dns-toolbar">
+      <div class="dns-note">
+        ${noDomain
+          ? `Falta el <strong>dominio final</strong> (arriba, junto al nombre de la tienda) — sin él, la verificación y los links de propagación no saben qué sitio consultar.`
+          : `Compara el valor esperado contra la resolución DNS pública actual (Google DNS) para <span class="mono">${escapeHtml(client.domain)}</span>. Si el navegador no permite la consulta en vivo, cada fila tiene un ↗ al detalle de propagación global.`}
+      </div>
+      <div style="display:flex;gap:10px;">
+        <a class="btn" target="_blank" rel="noopener" href="${client.domain ? `https://www.whatsmydns.net/#A/${encodeURIComponent(client.domain)}` : 'https://www.whatsmydns.net/'}">Ver propagación global ↗</a>
+        <button class="btn primary" id="btn-check-all-dns">Verificar todos</button>
+      </div>
+    </div>
+    <table class="dns-table">
+      <thead><tr><th>Tipo</th><th>Nombre</th><th>Valor esperado</th><th>Resuelve a</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="6" style="padding:16px 0;color:var(--dim);">Sin registros DNS cargados.</td></tr>`}</tbody>
+    </table>
+    <div class="add-dns-row">
+      <select id="new-dns-type"><option>A</option><option>CNAME</option><option>TXT</option><option>MX</option></select>
+      <input id="new-dns-name" placeholder="Nombre (@, www, correo._domainkey…)" />
+      <input id="new-dns-value" placeholder="Valor esperado" />
+      <button class="btn" id="btn-add-dns">+ Agregar registro</button>
+    </div>
+    <div class="footer-hint">
+      La verificación en vivo consulta <span class="mono">dns.google</span> desde tu navegador — sin registrar nada en Propultech ni en el cliente.
+    </div>
+  `;
+}
+
+/* ======================= RENDER: SITE HERO (top banner, full width) ======================= */
+let siteRefreshToken = 0;
+
+function renderSiteHero(client){
+  const h = client.siteHeight || 280;
+  if(!client.domain){
+    return `
+    <div class="site-hero site-hero--empty">
+      <div class="browser-mock" id="browser-mock" data-client-id="${client.id}" style="height:${h}px;">
+        <div class="browser-bar">
+          <div class="browser-dots"><span></span><span></span><span></span></div>
+          <div class="browser-url mono">sin dominio</div>
+        </div>
+        <div class="browser-body mono">Cargá el dominio final abajo para ver el sitio acá arriba.</div>
+      </div>
+    </div>`;
+  }
+  const base = client.domain.startsWith("http") ? client.domain : `https://${client.domain}`;
+  const cacheBust = siteRefreshToken ? (base.includes("?") ? "&" : "?") + "_lc=" + siteRefreshToken : "";
+  const shotUrl = `https://image.thum.io/get/width/1600/${encodeURI(base + cacheBust)}`;
+  return `
+    <div class="site-hero">
+      <div class="browser-mock" id="browser-mock" data-client-id="${client.id}" style="height:${h}px;">
+        <div class="browser-bar">
+          <div class="browser-dots"><span></span><span></span><span></span></div>
+          <div class="browser-url mono">🔒 ${escapeHtml(client.domain)}</div>
+          <div class="browser-actions">
+            <button class="icon-btn" data-resize-site="-1" title="Ventana más chica">▾</button>
+            <button class="icon-btn" data-resize-site="1" title="Ventana más grande">▴</button>
+            <button class="icon-btn" id="btn-refresh-site" title="Actualizar captura">⟳</button>
+            <a class="icon-btn" href="${escapeHtml(base)}" target="_blank" rel="noopener" title="Abrir sitio real">↗</a>
+          </div>
+        </div>
+        <div class="browser-body">
+          <img src="${escapeHtml(shotUrl)}" alt="Captura de ${escapeHtml(base)}" onerror="handleShotError(this)" data-open-site="${escapeHtml(base)}" />
+        </div>
+      </div>
+    </div>`;
+}
+
+function handleShotError(img){
+  img.onerror = null;
+  img.style.display = "none";
+  const wrap = img.parentElement;
+  if(wrap && !wrap.querySelector(".site-shot-error")){
+    const div = document.createElement("div");
+    div.className = "site-shot-error mono";
+    div.textContent = 'No se pudo cargar la captura. Probá actualizar en unos segundos.';
+    wrap.appendChild(div);
+  }
+}
+
+
+function renderMain(){
+  const client = activeClient();
+  if(!client){
+    return `
+      <div class="main">
+        <div class="empty-state">
+          <div style="font-size:34px;">🚀</div>
+          <div style="font-size:16px;color:var(--muted);">Ninguna tienda seleccionada</div>
+          <div style="font-size:12px;max-width:320px;">Crea tu primera misión de lanzamiento con la plantilla estándar de checklist + DNS, y ajústala por cliente.</div>
+          <button class="btn primary" id="btn-add-client-empty" style="margin-top:8px;">+ Nueva tienda</button>
+        </div>
+      </div>`;
+  }
+
+  const pct = overallProgress(client);
+  const badge = launchBadge(client);
+
+  return `
+    <div class="main">
+      ${renderSiteHero(client)}
+      <div class="topbar">
+        <div>
+          <div class="client-title-row">
+            <input class="client-title" id="client-name-input" value="${escapeHtml(client.name)}" />
+            <span class="status-pill status-${badge.color} mono">${badge.text}</span>
+          </div>
+          <div class="meta-row">
+            <div class="meta-field">
+              <label>Dominio final</label>
+              <input type="text" id="client-domain-input" placeholder="tienda.cl" value="${escapeHtml(client.domain || "")}" />
+            </div>
+            <div class="meta-field">
+              <label>Fecha go-live</label>
+              <input type="date" id="client-date-input" value="${client.launchDate}" />
+            </div>
+            <div class="meta-field">
+              <label>Hora</label>
+              <input type="time" id="client-time-input" value="${client.meetTime}" />
+            </div>
+          </div>
+        </div>
+        <div class="ring-wrap">
+          <div>
+            <div class="ring-num mono">${pct}%</div>
+            <div class="ring-label">avance general</div>
+          </div>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab ${ACTIVE_TAB==='checklist'?'active':''}" data-tab="checklist">Checklist</button>
+        <button class="tab ${ACTIVE_TAB==='dns'?'active':''}" data-tab="dns">DNS</button>
+      </div>
+      <div class="content" data-scroll-key="${client.id}:${ACTIVE_TAB}">
+        ${ACTIVE_TAB==='checklist' ? renderChecklist(client) : renderDns(client)}
+      </div>
+    </div>
+  `;
+}
+
+function render(){
+  // preserve scroll position across the full re-render (otherwise every
+  // checkbox click/edit yanks you back to the top) — the whole page scrolls
+  // now (like a landing page), so it's window scroll we restore, not an
+  // internal pane's. Still gated to "same client/tab", so a real navigation
+  // (switching client or tab) correctly starts back at the top.
+  const prevContent = document.querySelector(".content");
+  const prevMissions = document.querySelector(".missions");
+  const prevContentKey = prevContent ? prevContent.getAttribute("data-scroll-key") : null;
+  const scrollState = {
+    page: window.scrollY,
+    missions: prevMissions ? prevMissions.scrollTop : 0
+  };
+
+  document.getElementById("root").innerHTML = renderSidebar() + renderMain();
+  attachEvents();
+
+  const nextContent = document.querySelector(".content");
+  if(nextContent && nextContent.getAttribute("data-scroll-key") === prevContentKey){
+    window.scrollTo(0, scrollState.page);
+  }
+  const nextMissions = document.querySelector(".missions");
+  if(nextMissions) nextMissions.scrollTop = scrollState.missions;
+
+  setupBrowserMockResize();
+}
+
+// Watches the browser-mock box for size changes — whether from the native
+// drag handle (bottom-right corner) or the OS's own resize cursor — and
+// persists whatever height the person leaves it at, per client. Re-attached
+// after every render since the old element (and its observer) is discarded
+// along with the replaced DOM.
+let browserMockResizeObserver = null;
+function setupBrowserMockResize(){
+  if(browserMockResizeObserver){ browserMockResizeObserver.disconnect(); browserMockResizeObserver = null; }
+  const el = document.getElementById("browser-mock");
+  if(!el || typeof ResizeObserver === "undefined") return;
+  let firstFire = true;
+  browserMockResizeObserver = new ResizeObserver(() => {
+    if(firstFire){ firstFire = false; return; } // ignore the initial observe() callback, only react to real changes
+    const clientId = el.getAttribute("data-client-id");
+    const client = STATE.clients[clientId];
+    if(!client) return;
+    const h = Math.round(el.getBoundingClientRect().height);
+    if(h === client.siteHeight) return;
+    client.siteHeight = h;
+    saveState(); // no render() here — would fight the drag gesture; the height is already visually correct
+  });
+  browserMockResizeObserver.observe(el);
+}
+
+/* ======================= EVENTS ======================= */
+function attachEvents(){
+  const root = document.getElementById("root");
+
+  // sidebar
+  root.querySelectorAll("[data-select-client]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      if(e.target.closest("[data-del-client]")) return;
+      STATE.activeId = el.getAttribute("data-select-client");
+      ACTIVE_TAB = "checklist";
+      render();
+    });
+  });
+  root.querySelectorAll("[data-del-client]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const id = el.getAttribute("data-del-client");
+      const c = STATE.clients[id];
+      if(!confirm(`¿Eliminar la misión "${c.name}"? Esta acción no se puede deshacer.`)) return;
+      delete STATE.clients[id];
+      STATE.order = STATE.order.filter(x=>x!==id);
+      if(STATE.activeId === id) STATE.activeId = STATE.order[0] || null;
+      saveState(); render();
+    });
+  });
+
+  root.querySelectorAll("[data-copy-org-link]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const org = STATE.orgs[el.getAttribute("data-copy-org-link")];
+      if(!org) return;
+      const link = orgShareLink(org);
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(link).then(
+          () => alert(`Link copiado para "${org.name}":\n${link}`),
+          () => prompt(`Copiá el link para "${org.name}":`, link)
+        );
+      }else{
+        prompt(`Copiá el link para "${org.name}":`, link);
+      }
+    });
+  });
+  root.querySelectorAll("[data-add-store-org]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      addClientFlow(el.getAttribute("data-add-store-org"));
+    });
+  });
+  root.querySelectorAll("[data-del-org]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const orgId = el.getAttribute("data-del-org");
+      const org = STATE.orgs[orgId];
+      if(!org) return;
+      const storeCount = STATE.order.filter(id => STATE.clients[id] && STATE.clients[id].orgId === orgId).length;
+      const msg = storeCount
+        ? `¿Eliminar el cliente "${org.name}"? Sus ${storeCount} tienda(s) NO se borran, quedan sin cliente asignado.`
+        : `¿Eliminar el cliente "${org.name}"?`;
+      if(!confirm(msg)) return;
+      delete STATE.orgs[orgId];
+      STATE.orgOrder = STATE.orgOrder.filter(x=>x!==orgId);
+      saveState(); render();
+    });
+  });
+  root.querySelectorAll("[data-edit-org]").forEach(el=>{
+    el.addEventListener("change", ()=>{
+      const org = STATE.orgs[el.getAttribute("data-edit-org")];
+      if(!org) return;
+      org.name = el.value.trim() || org.name;
+      el.value = org.name;
+      saveState(); render();
+    });
+    el.addEventListener("click", (e)=> e.stopPropagation());
+    el.addEventListener("mousedown", (e)=> e.stopPropagation()); // don't start a drag from inside the text field
+  });
+
+  // drag-and-drop: reorder missions, and reassign a store to a different
+  // client by dropping it onto another client's stores, header, or empty section
+  root.querySelectorAll("[data-drag-id]").forEach(el=>{
+    el.addEventListener("dragstart", (e)=>{
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", el.getAttribute("data-drag-id"));
+      el.classList.add("dragging");
+    });
+    el.addEventListener("dragend", ()=>{
+      el.classList.remove("dragging");
+      root.querySelectorAll(".drag-over").forEach(x=>x.classList.remove("drag-over"));
+    });
+    el.addEventListener("dragover", (e)=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      el.classList.add("drag-over");
+    });
+    el.addEventListener("dragleave", ()=>{ el.classList.remove("drag-over"); });
+    el.addEventListener("drop", (e)=>{
+      e.preventDefault();
+      e.stopPropagation(); // don't also trigger the org-section's own drop handler underneath
+      el.classList.remove("drag-over");
+      const draggedId = e.dataTransfer.getData("text/plain");
+      const targetId = el.getAttribute("data-drag-id");
+      if(!draggedId || draggedId === targetId) return;
+      const draggedClient = STATE.clients[draggedId];
+      const targetClient = STATE.clients[targetId];
+      if(!draggedClient || !targetClient) return;
+      draggedClient.orgId = targetClient.orgId; // move to whatever client the drop target belongs to
+      STATE.order = STATE.order.filter(id => id !== draggedId);
+      const to = STATE.order.indexOf(targetId);
+      STATE.order.splice(to, 0, draggedId);
+      saveState(); render();
+    });
+  });
+
+  // dropping directly on a client's header/section (not on a specific store row) —
+  // moves the store there even if that client has zero stores so far
+  root.querySelectorAll("[data-org-drop]").forEach(el=>{
+    el.addEventListener("dragover", (e)=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      el.classList.add("drag-over");
+    });
+    el.addEventListener("dragleave", (e)=>{
+      if(!el.contains(e.relatedTarget)) el.classList.remove("drag-over");
+    });
+    el.addEventListener("drop", (e)=>{
+      e.preventDefault();
+      el.classList.remove("drag-over");
+      const draggedId = e.dataTransfer.getData("text/plain");
+      const orgId = el.getAttribute("data-org-drop");
+      const draggedClient = STATE.clients[draggedId];
+      if(!draggedClient || !orgId) return;
+      draggedClient.orgId = orgId;
+      STATE.order = STATE.order.filter(id => id !== draggedId);
+      const orgStoreIds = STATE.order.filter(id => STATE.clients[id] && STATE.clients[id].orgId === orgId);
+      if(orgStoreIds.length){
+        STATE.order.splice(STATE.order.indexOf(orgStoreIds[orgStoreIds.length-1]) + 1, 0, draggedId);
+      }else{
+        STATE.order.push(draggedId);
+      }
+      saveState(); render();
+    });
+  });
+
+  const addBtn = document.getElementById("btn-add-client");
+  if(addBtn) addBtn.addEventListener("click", ()=> addClientFlow(SCOPED_ORG_ID));
+  const addBtnEmpty = document.getElementById("btn-add-client-empty");
+  if(addBtnEmpty) addBtnEmpty.addEventListener("click", ()=> addClientFlow(SCOPED_ORG_ID));
+  const addOrgBtn = document.getElementById("btn-add-org");
+  if(addOrgBtn) addOrgBtn.addEventListener("click", addOrgFlow);
+  const changePassBtn = document.getElementById("btn-change-admin-pass");
+  if(changePassBtn) changePassBtn.addEventListener("click", changeAdminPasswordFlow);
+
+  // tabs
+  root.querySelectorAll("[data-tab]").forEach(el=>{
+    el.addEventListener("click", ()=>{ ACTIVE_TAB = el.getAttribute("data-tab"); render(); });
+  });
+
+  const client = activeClient();
+  if(!client) return;
+
+  // header fields
+  const nameInput = document.getElementById("client-name-input");
+  if(nameInput){
+    nameInput.addEventListener("change", ()=>{ client.name = nameInput.value.trim() || "Sin nombre"; saveState(); render(); });
+  }
+  const domainInput = document.getElementById("client-domain-input");
+  if(domainInput) domainInput.addEventListener("change", ()=>{
+    client.domain = domainInput.value.trim().replace(/^https?:\/\//,"").replace(/\/$/,"");
+    saveState(); render();
+  });
+  const dateInput = document.getElementById("client-date-input");
+  if(dateInput) dateInput.addEventListener("change", ()=>{ client.launchDate = dateInput.value; saveState(); render(); });
+  const timeInput = document.getElementById("client-time-input");
+  if(timeInput) timeInput.addEventListener("change", ()=>{ client.meetTime = timeInput.value; saveState(); render(); });
+
+  if(ACTIVE_TAB === "checklist"){
+    root.querySelectorAll("[data-cycle-status]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const t = client.tasks.find(x=>x.id===el.getAttribute("data-cycle-status"));
+        // "listo" comes right after "pendiente" so a single click checks it off
+        // like a normal checkbox; a second click (while already done) offers
+        // "en progreso" as an in-between state before cycling back to pendiente.
+        const order = ["pendiente","listo","progreso"];
+        t.status = order[(order.indexOf(t.status)+1) % order.length];
+        saveState(); render();
+      });
+    });
+    root.querySelectorAll("[data-cycle-owner]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const t = client.tasks.find(x=>x.id===el.getAttribute("data-cycle-owner"));
+        const order = ["P","A","P&A"];
+        t.owner = order[(order.indexOf(t.owner)+1) % order.length];
+        saveState(); render();
+      });
+    });
+    root.querySelectorAll("[data-edit-task]").forEach(el=>{
+      el.addEventListener("change", ()=>{
+        const t = client.tasks.find(x=>x.id===el.getAttribute("data-edit-task"));
+        t.text = el.value; saveState();
+      });
+    });
+    root.querySelectorAll("[data-edit-comment]").forEach(el=>{
+      el.addEventListener("change", ()=>{
+        const t = client.tasks.find(x=>x.id===el.getAttribute("data-edit-comment"));
+        t.comment = el.value; saveState();
+      });
+    });
+    root.querySelectorAll("[data-del-task]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        client.tasks = client.tasks.filter(x=>x.id!==el.getAttribute("data-del-task"));
+        saveState(); render();
+      });
+    });
+    root.querySelectorAll("[data-validate-task]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        runValidator(client, el.getAttribute("data-validate-task"), el.getAttribute("data-validator-id"));
+      });
+    });
+    root.querySelectorAll("[data-goto-dns-tab]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        ACTIVE_TAB = "dns";
+        render();
+      });
+    });
+    root.querySelectorAll("[data-new-task]").forEach(el=>{
+      el.addEventListener("keydown", (e)=>{
+        if(e.key !== "Enter") return;
+        const val = el.value.trim();
+        if(!val) return;
+        client.tasks.push({id:uid("task"), phase:el.getAttribute("data-new-task"), text:val, owner:"P", status:"pendiente", comment:""});
+        saveState(); render();
+      });
+    });
+  }
+
+  const btnRefreshSite = document.getElementById("btn-refresh-site");
+  if(btnRefreshSite) btnRefreshSite.addEventListener("click", (e)=>{
+    e.preventDefault();
+    siteRefreshToken = Date.now();
+    render();
+  });
+  const siteShot = document.querySelector("[data-open-site]");
+  if(siteShot) siteShot.addEventListener("click", ()=>{
+    window.open(siteShot.getAttribute("data-open-site"), "_blank", "noopener");
+  });
+  root.querySelectorAll("[data-resize-site]").forEach(el=>{
+    el.addEventListener("click", (e)=>{
+      e.preventDefault();
+      const client = activeClient();
+      if(!client) return;
+      const dir = parseInt(el.getAttribute("data-resize-site"), 10);
+      const current = client.siteHeight || 280;
+      const next = Math.max(SITE_HEIGHT_MIN, Math.min(SITE_HEIGHT_MAX, current + dir * SITE_HEIGHT_STEP));
+      client.siteHeight = next;
+      saveState(); render();
+    });
+  });
+
+  if(ACTIVE_TAB === "dns"){
+    root.querySelectorAll("[data-dns-field]").forEach(el=>{
+      el.addEventListener("change", ()=>{
+        const rec = client.dns.find(x=>x.id===el.getAttribute("data-dns-id"));
+        rec[el.getAttribute("data-dns-field")] = el.value;
+        rec.checkStatus = "unknown"; rec.actual = null;
+        saveState(); render();
+      });
+    });
+    root.querySelectorAll("[data-del-dns]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        client.dns = client.dns.filter(x=>x.id!==el.getAttribute("data-del-dns"));
+        saveState(); render();
+      });
+    });
+    root.querySelectorAll("[data-check-dns]").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        const rec = client.dns.find(x=>x.id===el.getAttribute("data-check-dns"));
+        checkDnsRecord(client, rec);
+      });
+    });
+    const btnAll = document.getElementById("btn-check-all-dns");
+    if(btnAll) btnAll.addEventListener("click", ()=>{
+      client.dns.forEach(rec => checkDnsRecord(client, rec));
+    });
+    const btnAddDns = document.getElementById("btn-add-dns");
+    if(btnAddDns){
+      btnAddDns.addEventListener("click", ()=>{
+        const type = document.getElementById("new-dns-type").value;
+        const name = document.getElementById("new-dns-name").value.trim();
+        const value = document.getElementById("new-dns-value").value.trim();
+        if(!name || !value) return;
+        client.dns.push({id:uid("dns"), type, name, value, actual:null, checkStatus:"unknown"});
+        saveState(); render();
+      });
+    }
+  }
+}
+
+/* ======================= DNS LIVE CHECK ======================= */
+// Builds the fully-qualified name to actually query, using the client's
+// "Dominio final" field as the base. Handles bare "@" (root), a short
+// label like "www" or "gk9._domainkey", or an already-full name.
+function fqdn(name, domain){
+  const n = (name || "").trim();
+  if(!domain) return n; // no domain set yet — query exactly what was typed
+  if(n === "@" || n === "") return domain;
+  if(n.toLowerCase().endsWith("." + domain.toLowerCase()) || n.toLowerCase() === domain.toLowerCase()) return n;
+  return `${n}.${domain}`;
+}
+
+function propagationUrl(rec, domain){
+  const name = fqdn(rec.name, domain);
+  if(!name) return "https://www.whatsmydns.net/";
+  return `https://www.whatsmydns.net/#${encodeURIComponent(rec.type)}/${encodeURIComponent(name)}`;
+}
+
+async function checkDnsRecord(client, rec){
+  // per-record token: guards against a stale response for THIS record overwriting
+  // a newer one for the SAME record, without letting concurrent checks of OTHER
+  // records on the same client cancel each other out (that was the earlier bug —
+  // a single shared counter made "Verificar todos" leave records stuck "verificando…").
+  rec.__token = (rec.__token || 0) + 1;
+  const myToken = rec.__token;
+  rec.checkStatus = "checking";
+  render();
+  try{
+    const queryName = fqdn(rec.name, client.domain);
+    if(!queryName){ rec.checkStatus = "error"; rec.actual = null; render(); return; }
+    const url = `https://dns.google/resolve?name=${encodeURIComponent(queryName)}&type=${encodeURIComponent(rec.type)}`;
+    const resp = await fetch(url);
+    if(myToken !== rec.__token) return;
+    if(!resp.ok) throw new Error("bad response");
+    const data = await resp.json();
+    const answers = (data.Answer || []).map(a => a.data.replace(/\.$/,""));
+    rec.actual = answers.length ? answers.join(", ") : "(sin respuesta)";
+    const expected = rec.value.replace(/\.$/,"").toLowerCase();
+    const matched = answers.some(a => a.toLowerCase().includes(expected) || expected.includes(a.toLowerCase()));
+    rec.checkStatus = matched ? "match" : (answers.length ? "mismatch" : "error");
+  }catch(e){
+    if(myToken !== rec.__token) return;
+    rec.checkStatus = "error";
+    rec.actual = null;
+  }
+  if(myToken === rec.__token) { saveState(); render(); }
+}
+
+/* ======================= ADD CLIENT / ORG ======================= */
+function fallbackOrgId(){
+  // used when a store is created with no org context at all (shouldn't
+  // normally happen once orgs exist, but keeps things from becoming orphaned)
+  let bucket = Object.values(STATE.orgs).find(o => o.name === "Sin cliente asignado");
+  if(!bucket){
+    bucket = { id: uid("org"), name: "Sin cliente asignado", slug: makeOrgSlug() };
+    STATE.orgs[bucket.id] = bucket;
+    STATE.orgOrder.push(bucket.id);
+  }
+  return bucket.id;
+}
+
+function addClientFlow(orgId){
+  const name = prompt("Nombre de la tienda:");
+  if(!name || !name.trim()) return;
+  const finalOrgId = orgId || fallbackOrgId();
+  const c = defaultClient(name.trim(), finalOrgId);
+  STATE.clients[c.id] = c;
+  STATE.order.push(c.id);
+  STATE.activeId = c.id;
+  ACTIVE_TAB = "checklist";
+  saveState();
+  render();
+}
+
+function addOrgFlow(){
+  const name = prompt("Nombre del cliente (ej. Sportex, Patagonia):");
+  if(!name || !name.trim()) return;
+  const org = { id: uid("org"), name: name.trim(), slug: makeOrgSlug() };
+  STATE.orgs[org.id] = org;
+  STATE.orgOrder.push(org.id);
+  saveState();
+  render();
+  const link = orgShareLink(org);
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(link).then(
+      () => alert(`Cliente "${name.trim()}" creado. Link copiado al portapapeles:\n${link}`),
+      () => prompt(`Cliente "${name.trim()}" creado. Copiá su link:`, link)
+    );
+  }else{
+    prompt(`Cliente "${name.trim()}" creado. Copiá su link:`, link);
+  }
+}
+
+/* ======================= ADMIN ACCESS GATE ======================= */
+// Only gates the unscoped (admin/team) view — a valid ?org=<slug> link never
+// needs this, clients go straight to their own view as before.
+// IMPORTANT — honest limits of this gate: it stops someone from casually
+// browsing to the admin view in a normal browser. It does NOT stop a
+// technically-inclined person from reading the Supabase table directly with
+// the same public key that's visible in this page's source — that requires
+// real per-tenant access control on the database side (Supabase Auth +
+// row-level security keyed per org), which is a bigger project. Ask if you
+// want that; this is the quick, meaningful improvement in the meantime.
+const DEFAULT_ADMIN_PASS_HASH = "34773d8d057c3cf9a72a58a8229fa8cfb9f3dc94b3ceded75ce66c2d9bf4b5d5"; // sha256("propultech2026") — bootstrap fallback, only used until the team sets a real one from inside the app
+function currentAdminHash(){ return STATE.adminPassHash || DEFAULT_ADMIN_PASS_HASH; }
+
+async function sha256Hex(str){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function renderLockScreen(errorMsg){
+  document.getElementById("root").innerHTML = `
+    <div style="min-height:100vh;width:100%;display:flex;align-items:center;justify-content:center;background:var(--bg);">
+      <div style="width:320px;">
+        <div class="brand-kicker mono" style="color:var(--accent);">PROPULTECH</div>
+        <div style="font-size:22px;font-weight:700;margin-top:4px;">Launch Control</div>
+        <div style="color:var(--dim);font-size:12px;margin-top:6px;margin-bottom:24px;">Acceso de equipo — ingresá la clave para ver todos los clientes.</div>
+        <input type="password" id="admin-pass-input" placeholder="Clave" style="width:100%;background:none;border:1px solid var(--border-strong);color:var(--fg);padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:13px;" />
+        ${errorMsg ? `<div style="color:var(--danger);font-size:11px;margin-top:8px;">${escapeHtml(errorMsg)}</div>` : ""}
+        <button class="btn primary" id="admin-pass-submit" style="width:100%;margin-top:12px;">Entrar</button>
+      </div>
+    </div>`;
+  const input = document.getElementById("admin-pass-input");
+  const submit = () => tryAdminUnlock(input.value);
+  document.getElementById("admin-pass-submit").addEventListener("click", submit);
+  input.addEventListener("keydown", (e) => { if(e.key === "Enter") submit(); });
+  input.focus();
+}
+
+async function tryAdminUnlock(attempt){
+  const hash = await sha256Hex(attempt || "");
+  if(hash === currentAdminHash()){
+    sessionStorage.setItem("lc_admin_ok", "1");
+    render();
+  }else{
+    renderLockScreen("Clave incorrecta.");
+  }
+}
+
+async function changeAdminPasswordFlow(){
+  const p1 = prompt("Nueva clave de acceso para el equipo:");
+  if(!p1 || !p1.trim()) return;
+  const p2 = prompt("Repetí la clave nueva para confirmar:");
+  if(p1 !== p2){
+    alert("Las claves no coinciden — no se cambió nada.");
+    return;
+  }
+  STATE.adminPassHash = await sha256Hex(p1);
+  saveState();
+  alert("Clave actualizada. A partir de ahora hace falta la nueva clave para entrar (vos ya quedaste adentro en esta sesión).");
+}
+
+/* ======================= INIT ======================= */
+(async function init(){
+  await loadState();
+  if(URL_ORG_SLUG){
+    const match = Object.values(STATE.orgs).find(o => o.slug === URL_ORG_SLUG);
+    if(match){
+      SCOPED_ORG_ID = match.id;
+      // land on one of this org's own stores, never a store from another org
+      const orgStoreIds = STATE.order.filter(id => STATE.clients[id] && STATE.clients[id].orgId === SCOPED_ORG_ID);
+      if(!STATE.activeId || !orgStoreIds.includes(STATE.activeId)){
+        STATE.activeId = orgStoreIds[0] || null;
+      }
+    }
+  }
+  if(!SCOPED_ORG_ID && sessionStorage.getItem("lc_admin_ok") !== "1"){
+    renderLockScreen();
+    return;
+  }
+  render();
+})();
+</script>
+</body>
+</html>
